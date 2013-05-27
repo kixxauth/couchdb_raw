@@ -310,16 +310,16 @@ tests.push(function (done) {
       return done();
     }
 
-    function map(doc) {
+    var map = (function (doc) {
       emit(doc.color, doc);
-    }
+    }).toString();
 
     var opts = defaultOpts({
       method: 'PUT'
     , path: '/oldlady_tests/_design/app'
     , data: {
         views: {
-          by_color: {map: map.toString()}
+          by_color: {map: map}
         }
       }
     });
@@ -342,11 +342,11 @@ tests.push(function (done) {
       return done();
     }
 
-    function map(doc) {
-      emit(doc.color, doc);
-    }
+    var map = (function (doc) {
+      emit(doc.color, null);
+    }).toString();
 
-    function reduce(key, values, rereduce) {
+    var reduce = (function (key, values, rereduce) {
       var rv = {}, i, len, val, color;
 
       if (rereduce) {
@@ -356,21 +356,21 @@ tests.push(function (done) {
           for (color in val) {
             if (val.hasOwnProperty(color)) {
               rv[color] = rv[color] || 0;
-              rv[color] += 1;
+              rv[color] += val[color];
             }
           }
         }
       } else {
-        len = keys.length;
+        len = key.length;
         for (i = 0; i < len; i += 1) {
-          color = keys[i][0];
+          color = key[i][0];
           rv[color] = rv[color] || 0;
           rv[color] += 1;
         }
       }
 
       return rv;
-    }
+    }).toString();
 
     var opts = defaultOpts({
       method: 'PUT'
@@ -378,9 +378,62 @@ tests.push(function (done) {
     , rev: rev
     , data: {
         views: {
-          by_color: {map: map.toString(), reduce: reduce.toString()}
+          by_color: {map: map, reduce: reduce}
         }
       }
+    });
+
+    OLDLADY.request(opts)
+      .then(onSuccess)
+      .failure(catchFailure(done))
+  });
+
+  tests.push(function (done) {
+    "It should create documents in bulk.";
+
+    function onSuccess(res) {
+      data = res.body;
+      equal(res.statusCode, 201);
+      assertContentType('json', res);
+      assert(Array.isArray(data), 'data is an array');
+      return done();
+    }
+
+    docs = [
+      {color: 'red'},{color: 'green'},{color: 'blue'},
+      {color: 'red'},{color: 'red'},{color: 'red'},
+      {color: 'green'},{color: 'yellow'},{color: 'purple'}
+    ];
+
+    var opts = defaultOpts({
+      method: 'POST'
+    , path: '/oldlady_tests/_bulk_docs'
+    , data: {docs: docs}
+    });
+
+    OLDLADY.request(opts)
+      .then(onSuccess)
+      .failure(catchFailure(done))
+  });
+
+  tests.push(function (done) {
+    "It should query a view.";
+
+    function onSuccess(res) {
+      data = res.body;
+      equal(res.statusCode, 200);
+      assertContentType('json', res);
+      rv = data.rows[0].value;
+
+      // Reduce by default.
+      equal(rv['red'], 4, 'total red');
+      return done();
+    }
+
+    // Will reduce by default since there is a reduce function.
+    var opts = defaultOpts({
+      method: 'GET'
+    , path: '/oldlady_tests/_design/app/_view/by_color'
     });
 
     OLDLADY.request(opts)

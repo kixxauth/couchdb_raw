@@ -52,7 +52,13 @@ exports.request = function (opts) {
     });
 
     res.on('end', function () {
-      rv.body = JSON.parse(body);
+      try {
+        rv.body = JSON.parse(body);
+      } catch (err) {
+        var msg = "Invalid JSON returned by CouchDB: "+ err.message;
+        d.fail(new Error(msg));
+        return;
+      }
       d.keep(Object.freeze(rv));
       return;
     });
