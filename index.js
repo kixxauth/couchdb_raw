@@ -1,4 +1,5 @@
 var HTTP = require('http')
+  , QS = require('querystring')
   , IOU = require('iou')
 
 
@@ -37,6 +38,12 @@ exports.request = function (opts) {
 
   if (opts.data) {
     reqOpts.data = opts.data;
+  }
+
+  // Strip any existing query string.
+  reqOpts.path = reqOpts.path.split('?')[0]
+  if (opts.query) {
+    reqOpts.path += ('?'+ QS.stringify(opts.query));
   }
 
   function handler(res) {

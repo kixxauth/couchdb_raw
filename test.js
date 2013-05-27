@@ -442,6 +442,30 @@ tests.push(function (done) {
   });
 
   tests.push(function (done) {
+    "It should query a view with paramaters.";
+
+    function onSuccess(res) {
+      data = res.body;
+      equal(res.statusCode, 200);
+      assertContentType('json', res);
+      doc = data.rows.pop().doc;
+      equal(doc.color, 'blue', 'doc color');
+      return done();
+    }
+
+    // Will reduce by default since there is a reduce function.
+    var opts = defaultOpts({
+      method: 'GET'
+    , path: '/oldlady_tests/_design/app/_view/by_color'
+    , query: {reduce: false, include_docs: true, limit: 2}
+    });
+
+    OLDLADY.request(opts)
+      .then(onSuccess)
+      .failure(catchFailure(done))
+  });
+
+  tests.push(function (done) {
     "It should DELETE a view.";
 
     function onSuccess(res) {
