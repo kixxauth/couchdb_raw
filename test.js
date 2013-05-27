@@ -7,6 +7,7 @@ var ASSERT = require('assert')
   , HOSTNAME
   , PORT
 
+// Parse arguments.
 !(function () {
   var uri = process.argv[2] || '@'
     , parts = uri.split('@')
@@ -34,6 +35,8 @@ console.log("password:", PASSWORD)
 console.log("hostname:", HOSTNAME)
 console.log("port:", PORT)
 
+
+// Collect test functions.
 var tests = [];
 
 
@@ -53,18 +56,16 @@ tests.push(function (done) {
   "It should report unreachable host.";
 
   function onSuccess(res) {
-    printError(err);
     wrapAssertion(function () {
       assert(false, ".then() handler should not be called.")
-    });
+    }, done);
   }
 
   function onFailure(err) {
     wrapAssertion(function () {
       equal(err.code, 'ENOTFOUND');
       equal(err.message, "No CouchDB server found at 'foo.bar.baz'.")
-    });
-    return done();
+    }, done);
   };
 
   var opts = defaultOpts({
@@ -89,20 +90,13 @@ tests.push(function (done) {
     return done();
   }
 
-  function onFailure(err) {
-    printError(err);
-    wrapAssertion(function () {
-      assert(false, ".failure() handler should not be called.")
-    });
-  };
-
   var opts = defaultOpts({
     path: '/_config'
   });
 
   OLDLADY.request(opts)
     .then(onSuccess)
-    .failure(onFailure)
+    .failure(catchFailure(done))
 });
 
 tests.push(function (done) {
@@ -123,13 +117,6 @@ tests.push(function (done) {
     return done();
   }
 
-  function onFailure(err) {
-    printError(err);
-    wrapAssertion(function () {
-      assert(false, ".failure() handler should not be called.")
-    });
-  };
-
   var opts = defaultOpts({
     path: '/_config'
   , username: USERNAME
@@ -138,27 +125,20 @@ tests.push(function (done) {
 
   OLDLADY.request(opts)
     .then(onSuccess)
-    .failure(onFailure)
+    .failure(catchFailure(done))
 });
 
 tests.push(function (done) {
   "It should create a database.";
 
   function onSuccess(res) {
+    data = res.body;
     equal(res.statusCode, 201);
     contentType = res.headers['content-type'];
     assert(/^application\/json/.test(contentType), contentType);
-    data = res.body;
     assert(data.ok);
     return done();
   }
-
-  function onFailure(err) {
-    printError(err);
-    wrapAssertion(function () {
-      assert(false, ".failure() handler should not be called.")
-    });
-  };
 
   var opts = defaultOpts({
     method: 'PUT'
@@ -169,8 +149,63 @@ tests.push(function (done) {
 
   OLDLADY.request(opts)
     .then(onSuccess)
-    .failure(onFailure)
+    .failure(catchFailure(done))
 });
+
+(function () {
+"Create and delete a document.";
+var rev;
+
+tests.push(function (done) {
+  "It should PUT a new document.";
+
+  function onSuccess(res) {
+    data = res.body;
+    equal(res.statusCode, 201);
+    contentType = res.headers['content-type'];
+    assert(/^application\/json/.test(contentType), contentType);
+    assert(data.ok);
+    equal(data.id, 'mydocument');
+    rev = data.rev;
+    return done();
+  }
+
+  var opts = defaultOpts({
+    method: 'PUT'
+  , path: '/oldlady_tests/mydocument'
+  , data: {model: "Foo"}
+  });
+
+  OLDLADY.request(opts)
+    .then(onSuccess)
+    .failure(catchFailure(done))
+});
+
+tests.push(function (done) {
+  "It should DELETE a document.";
+
+  function onSuccess(res) {
+    data = res.body;
+    equal(res.statusCode, 200);
+    contentType = res.headers['content-type'];
+    assert(/^application\/json/.test(contentType), contentType);
+    assert(data.ok);
+    assert(data.ok);
+    equal(data.id, 'mydocument');
+    return done();
+  }
+
+  var opts = defaultOpts({
+    method: 'DELETE'
+  , path: '/oldlady_tests/mydocument'
+  , rev: rev
+  });
+
+  OLDLADY.request(opts)
+    .then(onSuccess)
+    .failure(catchFailure(done))
+});
+}());
 
 tests.push(function (done) {
   "It should delete a database.";
@@ -184,13 +219,6 @@ tests.push(function (done) {
     return done();
   }
 
-  function onFailure(err) {
-    printError(err);
-    wrapAssertion(function () {
-      assert(false, ".failure() handler should not be called.")
-    });
-  };
-
   var opts = defaultOpts({
     method: 'DELETE'
   , path: '/oldlady_tests'
@@ -200,11 +228,11 @@ tests.push(function (done) {
 
   OLDLADY.request(opts)
     .then(onSuccess)
-    .failure(onFailure)
+    .failure(catchFailure(done))
 });
 
 // End of testing.
-tests.push(function () { console.log('PASSED'); });
+tests.push(function () { console.log('DONE'); });
 
 
 // ---
@@ -238,13 +266,21 @@ function printError(err) {
   console.error(err.stack || err.message || err.toString());
 }
 
-function wrapAssertion(block) {
+function wrapAssertion(block, next) {
   try {
     block();
   } catch (err) {
     printError(err);
-    process.exit(1);
   }
+
+  return next();
+}
+
+function catchFailure(next) {
+  return function (err) {
+    printError(err);
+    return next();
+  };
 }
 
 // Test vocabulary

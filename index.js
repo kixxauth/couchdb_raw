@@ -13,11 +13,15 @@ exports.request = function (opts) {
     hostname: opts.hostname || 'localhost'
   , port: opts.port || 5984
   , path: opts.path || ''
-  , method: opts.method
+  , method: (opts.method || 'get').toUpperCase()
   , headers: {
       'accept': 'application/json'
     }
   };
+
+  if (!/^\//.test(reqOpts.path)) {
+    throw new Error("opts.path must start with a '/'.");
+  }
 
   if (opts.username) {
     if (!opts.password) {
@@ -27,11 +31,15 @@ exports.request = function (opts) {
     reqOpts.headers['Authorization'] = auth;
   }
 
-  if (!/^\//.test(reqOpts.path)) {
-    throw new Error("opts.path must start with a '/'.");
+  if (opts.rev) {
+    reqOpts.headers['If-Match'] = opts.rev;
   }
 
-  req = HTTP.request(reqOpts, function (res) {
+  if (opts.data) {
+    reqOpts.data = opts.data;
+  }
+
+  function handler(res) {
     var rv = Object.create(null)
       , body = ''
 
@@ -48,32 +56,72 @@ exports.request = function (opts) {
       d.keep(Object.freeze(rv));
       return;
     });
-  });
+  }
 
-  req.on('error', function (err) {
+  switch (reqOpts.method) {
+  case 'GET':
+    exports.do_GET_DELETE(reqOpts, d, handler);
+    break;
+  case 'DELETE':
+    exports.do_GET_DELETE(reqOpts, d, handler);
+    break;
+  case 'POST':
+    exports.do_POST_PUT(reqOpts, d, handler);
+    break;
+  case 'PUT':
+    exports.do_POST_PUT(reqOpts, d, handler);
+    break;
+  default:
+    throw new Error("Invalid HTTP method '"+ reqOpts.method +"'.");
+  }
+
+  return d.promise
+};
+
+
+exports.do_GET_DELETE = function (opts, deferred, handler) {
+  req = HTTP.request(opts, handler);
+  req.on('error', exports.newErrorHandler(opts, deferred));
+  req.end();
+  return req;
+};
+
+
+exports.do_POST_PUT = function (opts, deferred, handler) {
+  opts.headers['Content-Type'] = 'application/json';
+  req = HTTP.request(opts, handler);
+  req.on('error', exports.newErrorHandler(opts, deferred));
+
+  if (opts.data) {
+    req.write(JSON.stringify(opts.data));
+  }
+
+  req.end();
+  return req;
+};
+
+exports.newErrorHandler = function (opts, deferred) {
+  return function (err) {
     err = err || {};
     var rv
 
     if (err.code === 'EHOSTUNREACH') {
-      rv = new Error("CouchDB server could not be reached at '"+ reqOpts.hostname +"'.");
+      rv = new Error("CouchDB server could not be reached at '"+ opts.hostname +"'.");
       rv.code = err.code;
     } else if (err.code === 'ENOTFOUND') {
-      rv = new Error("No CouchDB server found at '"+ reqOpts.hostname +"'.");
+      rv = new Error("No CouchDB server found at '"+ opts.hostname +"'.");
       rv.code = err.code;
     } else if (err.code === 'ECONNREFUSED') {
-      rv = new Error("The server at '"+ reqOpts.hostname +"' refused the connection.");
+      rv = new Error("The server at '"+ opts.hostname +"' refused the connection.");
       rv.code = err.code;
     } else {
       rv = err;
     }
 
-    d.fail(rv);
-  });
-
-  req.end();
-
-  return d.promise
+    deferred.fail(rv);
+  };
 };
+
 
 exports.basicAuth = function (username, password) {
   var str = username +':'+ password
