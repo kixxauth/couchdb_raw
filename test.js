@@ -83,15 +83,16 @@ tests.push(function (done) {
   function onSuccess(res) {
     data = res.body;
     equal(res.statusCode, 401);
-    contentType = res.headers['content-type'];
-    assert(/^application\/json/.test(contentType), contentType);
+    assertContentType('json', res);
     equal(data.error, "unauthorized");
-    equal(data.reason, "You are not a server admin.");
+    equal(data.reason, "Authentication required.");
     return done();
   }
 
   var opts = defaultOpts({
     path: '/_config'
+  , username: ''
+  , password: ''
   });
 
   OLDLADY.request(opts)
@@ -103,11 +104,9 @@ tests.push(function (done) {
   "It should respond with configurations.";
 
   function onSuccess(res) {
-    equal(res.statusCode, 200);
-    contentType = res.headers['content-type'];
     data = res.body;
-
-    assert(/^application\/json/.test(contentType), contentType);
+    equal(res.statusCode, 200);
+    assertContentType('json', res);
     assert(data.hasOwnProperty('stats'), 'has stats');
     assert(data.hasOwnProperty('replicator'), 'has replicator');
     assert(data.hasOwnProperty('log'), 'has log');
@@ -119,8 +118,6 @@ tests.push(function (done) {
 
   var opts = defaultOpts({
     path: '/_config'
-  , username: USERNAME
-  , password: PASSWORD
   });
 
   OLDLADY.request(opts)
@@ -134,8 +131,7 @@ tests.push(function (done) {
   function onSuccess(res) {
     data = res.body;
     equal(res.statusCode, 201);
-    contentType = res.headers['content-type'];
-    assert(/^application\/json/.test(contentType), contentType);
+    assertContentType('json', res);
     assert(data.ok);
     return done();
   }
@@ -143,8 +139,6 @@ tests.push(function (done) {
   var opts = defaultOpts({
     method: 'PUT'
   , path: '/oldlady_tests'
-  , username: USERNAME
-  , password: PASSWORD
   });
 
   OLDLADY.request(opts)
@@ -153,58 +147,269 @@ tests.push(function (done) {
 });
 
 (function () {
-"Create and delete a document.";
-var rev;
+  "Create, update, and delete a document.";
+  var rev, id;
 
-tests.push(function (done) {
-  "It should PUT a new document.";
+  tests.push(function (done) {
+    "It should PUT a new document.";
 
-  function onSuccess(res) {
-    data = res.body;
-    equal(res.statusCode, 201);
-    contentType = res.headers['content-type'];
-    assert(/^application\/json/.test(contentType), contentType);
-    assert(data.ok);
-    equal(data.id, 'mydocument');
-    rev = data.rev;
-    return done();
-  }
+    function onSuccess(res) {
+      data = res.body;
+      equal(res.statusCode, 201);
+      assertContentType('json', res);
+      assert(data.ok);
+      equal(data.id, 'mydocument');
+      rev = data.rev;
+      return done();
+    }
 
-  var opts = defaultOpts({
-    method: 'PUT'
-  , path: '/oldlady_tests/mydocument'
-  , data: {model: "Foo"}
+    var opts = defaultOpts({
+      method: 'PUT'
+    , path: '/oldlady_tests/mydocument'
+    , data: {model: "Foo"}
+    });
+
+    OLDLADY.request(opts)
+      .then(onSuccess)
+      .failure(catchFailure(done))
   });
 
-  OLDLADY.request(opts)
-    .then(onSuccess)
-    .failure(catchFailure(done))
-});
+  tests.push(function (done) {
+    "It should DELETE a document.";
 
-tests.push(function (done) {
-  "It should DELETE a document.";
+    function onSuccess(res) {
+      data = res.body;
+      equal(res.statusCode, 200);
+      assertContentType('json', res);
+      assert(data.ok);
+      equal(data.id, 'mydocument');
+      return done();
+    }
 
-  function onSuccess(res) {
-    data = res.body;
-    equal(res.statusCode, 200);
-    contentType = res.headers['content-type'];
-    assert(/^application\/json/.test(contentType), contentType);
-    assert(data.ok);
-    assert(data.ok);
-    equal(data.id, 'mydocument');
-    return done();
-  }
+    var opts = defaultOpts({
+      method: 'DELETE'
+    , path: '/oldlady_tests/mydocument'
+    , rev: rev
+    });
 
-  var opts = defaultOpts({
-    method: 'DELETE'
-  , path: '/oldlady_tests/mydocument'
-  , rev: rev
+    OLDLADY.request(opts)
+      .then(onSuccess)
+      .failure(catchFailure(done))
   });
 
-  OLDLADY.request(opts)
-    .then(onSuccess)
-    .failure(catchFailure(done))
-});
+  tests.push(function (done) {
+    "It should POST a new document.";
+
+    function onSuccess(res) {
+      data = res.body;
+      equal(res.statusCode, 201);
+      assertContentType('json', res);
+      assert(data.ok, 'data.ok');
+      equal(data.id.length, 32, 'uid length: '+ data.id.length);
+      id = data.id;
+      return done();
+    }
+
+    var opts = defaultOpts({
+      method: 'POST'
+    , path: '/oldlady_tests/'
+    , data: {model: "Foo"}
+    });
+
+    OLDLADY.request(opts)
+      .then(onSuccess)
+      .failure(catchFailure(done))
+  });
+
+  tests.push(function (done) {
+    "It should GET a document.";
+
+    function onSuccess(res) {
+      data = res.body;
+      equal(res.statusCode, 200);
+      assertContentType('json', res);
+      keys = Object.keys(data);
+      assert(keys.indexOf('_id') !== -1, '_id');
+      assert(keys.indexOf('_rev') !== -1, '_rev');
+      assert(keys.indexOf('model') !== -1, 'model');
+      rev = data._rev;
+      return done();
+    }
+
+    var opts = defaultOpts({
+      path: '/oldlady_tests/'+ id
+    });
+
+    OLDLADY.request(opts)
+      .then(onSuccess)
+      .failure(catchFailure(done))
+  });
+
+  tests.push(function (done) {
+    "It requires authentication to GET a document.";
+
+    function onSuccess(res) {
+      data = res.body;
+      equal(res.statusCode, 401);
+      assertContentType('json', res);
+      equal(data.error, "unauthorized");
+      equal(data.reason, "Authentication required.");
+      return done();
+    }
+
+    var opts = defaultOpts({
+      path: '/oldlady_tests/'+ id
+    , username: ''
+    , password: ''
+    });
+
+    OLDLADY.request(opts)
+      .then(onSuccess)
+      .failure(catchFailure(done))
+  });
+
+  tests.push(function (done) {
+    "It should update document.";
+
+    function onSuccess(res) {
+      data = res.body;
+      equal(res.statusCode, 201);
+      assertContentType('json', res);
+      assert(data.ok, 'data.ok');
+      equal(data.id, id);
+      return done();
+    }
+
+    var opts = defaultOpts({
+      method: 'PUT'
+    , path: '/oldlady_tests/'+ id
+    , data: {model: "Bar"}
+    , rev: rev
+    });
+
+    OLDLADY.request(opts)
+      .then(onSuccess)
+      .failure(catchFailure(done))
+  });
+}());
+
+(function () {
+  "Create, update, qeury, and delete a view.";
+  var rev
+
+  tests.push(function (done) {
+    "It should PUT a new view.";
+
+    function onSuccess(res) {
+      data = res.body;
+      equal(res.statusCode, 201);
+      assertContentType('json', res);
+      assert(data.ok);
+      equal(data.id, '_design/app');
+      rev = data.rev;
+      return done();
+    }
+
+    function map(doc) {
+      emit(doc.color, doc);
+    }
+
+    var opts = defaultOpts({
+      method: 'PUT'
+    , path: '/oldlady_tests/_design/app'
+    , data: {
+        views: {
+          by_color: {map: map.toString()}
+        }
+      }
+    });
+
+    OLDLADY.request(opts)
+      .then(onSuccess)
+      .failure(catchFailure(done))
+  });
+
+  tests.push(function (done) {
+    "It should update a view document.";
+
+    function onSuccess(res) {
+      data = res.body;
+      equal(res.statusCode, 201);
+      assertContentType('json', res);
+      assert(data.ok);
+      equal(data.id, '_design/app');
+      rev = data.rev;
+      return done();
+    }
+
+    function map(doc) {
+      emit(doc.color, doc);
+    }
+
+    function reduce(key, values, rereduce) {
+      var rv = {}, i, len, val, color;
+
+      if (rereduce) {
+        len = values.length;
+        for (i = 0; i < len; i += 1) {
+          val = values[i];
+          for (color in val) {
+            if (val.hasOwnProperty(color)) {
+              rv[color] = rv[color] || 0;
+              rv[color] += 1;
+            }
+          }
+        }
+      } else {
+        len = keys.length;
+        for (i = 0; i < len; i += 1) {
+          color = keys[i][0];
+          rv[color] = rv[color] || 0;
+          rv[color] += 1;
+        }
+      }
+
+      return rv;
+    }
+
+    var opts = defaultOpts({
+      method: 'PUT'
+    , path: '/oldlady_tests/_design/app'
+    , rev: rev
+    , data: {
+        views: {
+          by_color: {map: map.toString(), reduce: reduce.toString()}
+        }
+      }
+    });
+
+    OLDLADY.request(opts)
+      .then(onSuccess)
+      .failure(catchFailure(done))
+  });
+
+  tests.push(function (done) {
+    "It should DELETE a view.";
+
+    function onSuccess(res) {
+      data = res.body;
+      equal(res.statusCode, 200);
+      assertContentType('json', res);
+      assert(data.ok);
+      equal(data.id, '_design/app');
+      return done();
+    }
+
+    var opts = defaultOpts({
+      method: 'DELETE'
+    , path: '/oldlady_tests/_design/app'
+    , rev: rev
+    });
+
+    OLDLADY.request(opts)
+      .then(onSuccess)
+      .failure(catchFailure(done))
+  });
 }());
 
 tests.push(function (done) {
@@ -212,8 +417,7 @@ tests.push(function (done) {
 
   function onSuccess(res) {
     equal(res.statusCode, 200);
-    contentType = res.headers['content-type'];
-    assert(/^application\/json/.test(contentType), contentType);
+    assertContentType('json', res);
     data = res.body;
     assert(data.ok);
     return done();
@@ -222,8 +426,6 @@ tests.push(function (done) {
   var opts = defaultOpts({
     method: 'DELETE'
   , path: '/oldlady_tests'
-  , username: USERNAME
-  , password: PASSWORD
   });
 
   OLDLADY.request(opts)
@@ -244,6 +446,8 @@ function defaultOpts(opts) {
   var rv = {
     hostname: HOSTNAME
   , port: PORT
+  , username: USERNAME
+  , password: PASSWORD
   , method: 'GET'
   , path: '/'
   };
@@ -298,6 +502,11 @@ function equal(actual, expected, msg) {
 function notEqual(actual, expected, msg) {
   msg = actual +' == '+ expected +'; '+ msg;
   return ASSERT.notEqual(actual, expected, msg);
+}
+
+function assertContentType(type, res) {
+  contentType = res.headers['content-type'];
+  assert(/^application\/json/.test(contentType), contentType);
 }
 
 // Compose test functions using continuation passing.
