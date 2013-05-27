@@ -1,0 +1,12 @@
+{
+    "name": "oldlady",
+    "version": "0.1.0",
+    "description": "Tell you CouchDB to get off his ass and mow the lawn.",
+    "author": "Kris Walker <kris@kixx.name> (http://www.kixx.name/)",
+    "keywords": ["couchdb", "http","wrapper"],
+    "repository": {"type":"git", "url":"https://github.com/kixxauth/oldlady.git"},
+    "bugs": "https://github.com/kixxauth/oldlady/issues",
+    "dependencies": {
+        "iou": "0.1.0"
+    }
+}
