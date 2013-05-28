@@ -1,7 +1,7 @@
-OldLady
-=======
-An HTTP library specifically for CouchDB. The OldLady tells your CouchDB to get
-off his ass and mow the lawn.
+CouchDB RAW
+===========
+An HTTP library specifically for CouchDB. This utility is meant to underpin
+other, more comprehensive, CouchDB tools.
 
 Copyright and License
 ---------------------

@@ -1,11 +1,11 @@
 {
-    "name": "oldlady",
+    "name": "couchdb_raw",
     "version": "0.1.0",
-    "description": "Tell you CouchDB to get off his ass and mow the lawn.",
+    "description": "An HTTP library specifically for CouchDB.",
     "author": "Kris Walker <kris@kixx.name> (http://www.kixx.name/)",
-    "keywords": ["couchdb", "http","wrapper"],
-    "repository": {"type":"git", "url":"https://github.com/kixxauth/oldlady.git"},
-    "bugs": "https://github.com/kixxauth/oldlady/issues",
+    "keywords": ["couchdb", "http", "raw"],
+    "repository": {"type":"git", "url":"https://github.com/kixxauth/couchdb_raw.git"},
+    "bugs": "https://github.com/kixxauth/couchdb_raw/issues",
     "dependencies": {
         "iou": "0.1.0"
     }
