@@ -3,6 +3,27 @@ var HTTP = require('http')
   , IOU = require('iou')
 
 
+// Public: Make an HTTP request to a CouchDB server.
+//
+// This is the main entry point for the RAW CouchDB API.
+//
+// opts - A hash Object of request options.
+//   .hostname - Just the hostname String
+//               (no protocol or port; default is 'localhost').
+//   .port     - The Port Number (default is 5884).
+//   .method   - The HTTP method String to use (GET, POST, PUT, or DELETE).
+//   .path     - The URL path String. It must begin with a '/', and the query
+//               string will be ignored.
+//   .username - The username String if you want to authenticate (optional).
+//   .password - The password String (required if you define a username).
+//   .query    - A hash Object of URL query parameters to add (optional).
+//   .data     - An Object of data to be JSON serialized and put into the
+//               HTTP request body.
+//   .rev      - If a rev String is included, it will cause the If-Match HTTP
+//               header to be sent with this value (optional).
+//
+// Returns a Promise object, on which you can register callback functions by
+// passing them to Promise#failure() and Promise#then().
 exports.request = function (opts) {
   opts = opts || {};
 
