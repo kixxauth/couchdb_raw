@@ -10,7 +10,6 @@ main () {
             ;;
         'test')
             shift
-            setup "$@"
             run_tests "$@"
             ;;
         'clean')
@@ -50,8 +49,9 @@ run_tests () {
         exit
     fi
 
+    setup
     cd "$BASE/"
-    node test.js "$hostname"
+    node $BASE/bin/run_tests.js "$hostname" test/
 }
 
 clean () {
