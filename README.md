@@ -1,7 +1,6 @@
 CouchDB RAW
 ===========
-An HTTP library specifically for CouchDB. This utility is meant to underpin
-other, more comprehensive, CouchDB tools.
+An HTTP library specifically for CouchDB. This utility is meant as a foundation for other, more comprehensive, CouchDB tools.
 
 Copyright and License
 ---------------------
