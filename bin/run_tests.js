@@ -2,11 +2,18 @@ var NFS = require('fs')
   , NPATH = require('path')
 
   , NODEUNIT = require('nodeunit')
+  , ASSERT = require('nodeunit/lib/assert')
 
   , testPath = NPATH.resolve(process.argv[3])
   , fileMatcher = /test\.js$/
   , files
 
+ASSERT.assertJSON = function assertJSON(res, msg) {
+  var contentType = res.headers['content-type'];
+  if (!/^application\/json/.test(contentType)) {
+    ASSERT.fail(contentType, 'application/json', msg, '==', ASSERT.assertJSON);
+  }
+};
 
 function readTree(dir) {
 	var collection = []

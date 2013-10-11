@@ -34,7 +34,7 @@ exports.request = function (opts) {
   reqOpts = {
     hostname: opts.hostname || 'localhost'
   , port: opts.port || 5984
-  , path: opts.path || ''
+  , path: opts.path || '/'
   , method: (opts.method || 'get').toUpperCase()
   , headers: {
       'accept': 'application/json'
