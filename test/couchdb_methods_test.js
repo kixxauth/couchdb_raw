@@ -31,7 +31,7 @@ exports["Configs"] = {
 exports["create a database"] = {
 
   setUp: function (done) {
-    this.dbname = 'tmp_couchdb_raw_tests';
+    this.dbname = 'create_couchdb_raw_tests';
     COUCH.request({
       method: 'DELETE'
     , path: '/'+ this.dbname
@@ -56,6 +56,43 @@ exports["create a database"] = {
 
     COUCH.request({
       method: 'PUT'
+    , path: '/'+ this.dbname
+    , hostname: HOSTNAME
+    , port: PORT
+    , username: USERNAME
+    , password: PASSWORD
+    }).then(success).failure(test.done);
+  }
+};
+
+exports["delete a database"] = {
+
+  setUp: function (done) {
+    this.dbname = 'delete_couchdb_raw_tests';
+    COUCH.request({
+      method: 'PUT'
+    , path: '/'+ this.dbname
+    , hostname: HOSTNAME
+    , port: PORT
+    , username: USERNAME
+    , password: PASSWORD
+    })
+    .then(function () { return done() })
+    .failure(done)
+  },
+
+  "create a database": function (test) {
+    test.expect(3);
+
+    function success(res) {
+      test.strictEqual(res.statusCode, 200, 'status code')
+      test.assertJSON(res, 'JSON')
+      test.ok(res.body.ok, 'ok')
+      return test.done();
+    }
+
+    COUCH.request({
+      method: 'DELETE'
     , path: '/'+ this.dbname
     , hostname: HOSTNAME
     , port: PORT
