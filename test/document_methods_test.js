@@ -20,31 +20,73 @@ exports["document operations"] = {
       .then(done)
   },
 
-  "PUT/create": function (test) {
-    var docname = this.createDoc
+  "PUT/create and GET": function (test) {
+    var dbname = this.dbname
+      , docname = this.createDoc
 
-    test.expect(7)
+    test.expect(14);
 
-    function success(res) {
-      test.strictEqual(res.statusCode, 201, 'status code')
-      test.assertJSON(res, 'JSON')
-      test.ok(res.body.ok, 'ok')
-      test.equal(res.body.id, docname, 'doc.id')
-      test.equal(typeof res.body.rev, 'string', 'doc.rev')
-      test.equal(typeof res.body.model, 'undefined', 'doc.model')
-      test.equal(Object.keys(res.body).length, 3, 'Object.keys(doc)')
-      return test.done();
+    // Create the document:
+    function putDocument() {
+      var promise = COUCH.request({
+        method: 'PUT'
+      , path: '/'+ dbname +'/'+ docname
+      , data: {model: 'Foo', some_attr: 1}
+      , hostname: HOSTNAME
+      , port: PORT
+      , username: USERNAME
+      , password: PASSWORD
+      });
+      return promise;
     }
 
-    COUCH.request({
-      method: 'PUT'
-    , path: '/'+ this.dbname +'/'+ docname
-    , data: {model: 'Foo'}
-    , hostname: HOSTNAME
-    , port: PORT
-    , username: USERNAME
-    , password: PASSWORD
-    }).then(success).failure(test.done);
-  }
+    // Retrieve the document:
+    function getDoc(putResponse) {
+      var promise = COUCH.request({
+        method: 'GET'
+      , path: '/'+ dbname +'/'+ docname
+      , hostname: HOSTNAME
+      , port: PORT
+      , username: USERNAME
+      , password: PASSWORD
+      }).then(function (res) {
+        return {put: putResponse, get: res};
+      });
+      return promise;
+    }
+
+    // Test the results:
+    function runTests(responses) {
+      var get = responses.get
+        , put = responses.put
+
+      // Test the PUT
+      test.strictEqual(put.statusCode, 201, 'PUT status code')
+      test.assertJSON(put, 'PUT JSON')
+      test.ok(put.body.ok, 'ok')
+      test.equal(put.body.id, docname, 'doc.id')
+      test.equal(typeof put.body.rev, 'string', 'doc.rev')
+      test.equal(Object.keys(put.body).length, 3, 'PUT Object.keys(doc)')
+
+      // Test the GET
+      test.strictEqual(get.statusCode, 200, 'GET status code')
+      test.assertJSON(get, 'GET JSON')
+      test.equal(get.body._id, docname, 'doc._id')
+      test.equal(typeof get.body._rev, 'string', 'doc._rev')
+      test.equal(put.body.rev, get.body._rev, 'correct revision')
+      test.equal(get.body.model, 'Foo', 'doc.model')
+      test.equal(get.body.some_attr, 1, 'doc.some_attr')
+      test.equal(Object.keys(get.body).length, 4, 'GET Object.keys(doc)')
+
+      // Make sure to return undefined.
+      return;
+    }
+
+    putDocument()
+      .then(getDoc)
+      .then(runTests)
+      .then(test.done)
+      .failure(test.done);
+  },
 };
 
