@@ -9,6 +9,7 @@ exports["document operations"] = {
       , updateDoc = this.updateDoc = 'update_doc_3450d98sdljk'
       , removeDoc = this.removeDoc = 'remove_doc_3450d98sdljk'
       , fixture
+      , removeFixture
 
     fixture = this.fixture = {
       model: 'Person'
@@ -16,17 +17,28 @@ exports["document operations"] = {
     , age: 41
     }
 
-    function setCreatePath (res) {
+    removeFixture = this.removeFixture = {};
+
+    function setCreatePath() {
       return '/'+ dbname +'/'+ createDoc;
     }
 
-    function setUpdatePath (res) {
+    function setUpdatePath() {
       return {path: '/'+ dbname +'/'+ updateDoc, data: fixture};
     }
 
-    function captureFixture (res) {
+    function setDeletePath() {
+      return {path: '/'+ dbname +'/'+ removeDoc, data: {dummy: true}};
+    }
+
+    function captureFixture(res) {
       fixture._id = res.body._id;
       fixture._rev = res.body._rev;
+      return;
+    }
+
+    function captureRemoveFixture(res) {
+      removeFixture._rev = res.body._rev;
       return;
     }
 
@@ -36,6 +48,9 @@ exports["document operations"] = {
       .then(setUpdatePath)
       .then(LIB.ensureDocument)
       .then(captureFixture)
+      .then(setDeletePath)
+      .then(LIB.ensureDocument)
+      .then(captureRemoveFixture)
       .then(done)
       .failure(done)
   },
@@ -188,6 +203,71 @@ exports["document operations"] = {
       .then(runTests)
       .then(test.done)
       .failure(test.done);
+  },
+
+  "DELETE and GET": function (test) {
+    var dbname = this.dbname
+      , docname = this.removeDoc
+      , fixture = this.removeFixture
+
+    test.expect(9);
+
+    // Delete the fixture:
+    function deleteDoc() {
+      var promise = COUCH.request({
+        method: 'DELETE'
+      , path: '/'+ dbname +'/'+ docname
+      , rev: fixture._rev
+      , hostname: HOSTNAME
+      , port: PORT
+      , username: USERNAME
+      , password: PASSWORD
+      });
+      return promise;
+    }
+
+    // Attempt to retrieve the deleted fixture:
+    function getDoc(deleteResponse) {
+      var promise = COUCH.request({
+        method: 'GET'
+      , path: '/'+ dbname +'/'+ docname
+      , hostname: HOSTNAME
+      , port: PORT
+      , username: USERNAME
+      , password: PASSWORD
+      }).then(function (res) {
+        return {del: deleteResponse, get: res};
+      });
+      return promise;
+    }
+
+    // Test the results:
+    function runTests(responses) {
+      var get = responses.get
+        , del = responses.del
+
+      // Test the DELETE
+      test.strictEqual(del.statusCode, 200, 'DELETE status code')
+      test.assertJSON(del, 'DELETE JSON')
+      test.ok(del.body.ok, 'ok')
+      test.equal(del.body.id, docname, 'doc.id')
+      test.equal(typeof del.body.rev, 'string', 'doc.rev')
+
+      // Test the GET
+      test.strictEqual(get.statusCode, 404, 'GET status code')
+      test.assertJSON(get, 'GET JSON')
+      test.equal(get.body.error, 'not_found', 'body.error')
+      test.equal(get.body.reason, 'deleted', 'body.reason')
+
+      // Make sure to return undefined.
+      return;
+    }
+
+    deleteDoc()
+      .then(getDoc)
+      .then(runTests)
+      .then(test.done)
+      .failure(test.done);
   }
-};
+}; // Document Operations
 
