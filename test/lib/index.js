@@ -25,9 +25,9 @@ exports.ensureDatabase = (function () {
     }).then(function (res) {
       if (res.statusCode !== 201 && res.statusCode !== 412) {
         var msg = "Unexpected response status in ensureDatabase: "+ res.statusCode;
-        return done(new Error(msg));
+        return new Error(msg);
       }
-      return databaseName;
+      return res;
     });
 
     return promise;
