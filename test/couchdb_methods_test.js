@@ -44,7 +44,7 @@ exports["create a database"] = {
     .failure(done)
   },
 
-  "create a database": function (test) {
+  "returns 201": function (test) {
     test.expect(3);
 
     function success(res) {
@@ -81,7 +81,7 @@ exports["delete a database"] = {
     .failure(done)
   },
 
-  "create a database": function (test) {
+  "returns 200": function (test) {
     test.expect(3);
 
     function success(res) {
