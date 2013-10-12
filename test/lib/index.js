@@ -34,9 +34,39 @@ exports.ensureDatabase = (function () {
   };
 }());
 
+exports.ensureDocument = function (opts) {
+  var path = opts.path
+    , data = opts.data
+
+  function gotDocument(res) {
+    if (res.statusCode === 200) return res;
+
+    return COUCH.request({
+      method: 'PUT'
+    , path: path
+    , data: data
+    , hostname: HOSTNAME
+    , port: PORT
+    , username: USERNAME
+    , password: PASSWORD
+    });
+  }
+
+  var promise = COUCH.request({
+    method: 'GET'
+  , path: path
+  , hostname: HOSTNAME
+  , port: PORT
+  , username: USERNAME
+  , password: PASSWORD
+  })
+  .then(gotDocument);
+  return promise;
+};
+
 exports.removeDocument = function (path) {
   function gotDocument(res) {
-    if (res.statusCode !== 200) return;
+    if (res.statusCode !== 200) return res;
 
     return COUCH.request({
       method: 'DELETE'
@@ -58,7 +88,6 @@ exports.removeDocument = function (path) {
   , password: PASSWORD
   })
   .then(gotDocument)
-
   return promise;
 };
 
