@@ -35,7 +35,7 @@ exports["Connection errors"] = {
 
 exports["Authentication errors"] = {
 
-  "deny access without credentials": function (test) {
+  "deny config access without credentials": function (test) {
     test.expect(4);
 
     function testResult(res) {
@@ -51,6 +51,67 @@ exports["Authentication errors"] = {
     , path: '/_config'
     , hostname: HOSTNAME
     , port: PORT
+    }).then(testResult).failure(test.done);
+  },
+
+  "deny document access without credentials": function (test) {
+    test.expect(4);
+
+    function testResult(res) {
+      test.strictEqual(res.statusCode, 401, 'Status Code');
+      test.assertJSON(res);
+      test.equal(res.body.error, 'unauthorized', 'body.error');
+      test.equal(res.body.reason, 'Authentication required.', 'body.reason');
+      return test.done();
+    }
+
+    COUCH.request({
+      method: 'GET'
+    , path: '/some_database/some_document'
+    , hostname: HOSTNAME
+    , port: PORT
+    }).then(testResult).failure(test.done);
+  },
+
+  "deny config access with invalid credentials": function (test) {
+    test.expect(4);
+
+    function testResult(res) {
+      test.strictEqual(res.statusCode, 401, 'Status Code');
+      test.assertJSON(res);
+      test.equal(res.body.error, 'unauthorized', 'body.error');
+      test.equal(res.body.reason, 'Name or password is incorrect.', 'body.reason');
+      return test.done();
+    }
+
+    COUCH.request({
+      method: 'GET'
+    , path: '/_config'
+    , hostname: HOSTNAME
+    , port: PORT
+    , username: USERNAME
+    , password: 'invalid_password'
+    }).then(testResult).failure(test.done);
+  },
+
+  "deny document access with invalid credentials": function (test) {
+    test.expect(4);
+
+    function testResult(res) {
+      test.strictEqual(res.statusCode, 401, 'Status Code');
+      test.assertJSON(res);
+      test.equal(res.body.error, 'unauthorized', 'body.error');
+      test.equal(res.body.reason, 'Name or password is incorrect.', 'body.reason');
+      return test.done();
+    }
+
+    COUCH.request({
+      method: 'GET'
+    , path: '/some_database/some_document'
+    , hostname: HOSTNAME
+    , port: PORT
+    , username: USERNAME
+    , password: 'invalid_password'
     }).then(testResult).failure(test.done);
   }
 };
