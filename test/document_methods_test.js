@@ -1,38 +1,22 @@
 var COUCH = require('../index')
+  , LIB = require('./lib')
 
 exports["document operations"] = {
 
-  setUp: (function () {
-    var dbname
+  setUp: function (done) {
+    var dbname = this.dbname = 'couchdb_raw_tests';
+    var docname = this.docname = 'asdfoij4098asf234';
 
-    return function (done) {
-      this.dbname = 'couchdb_raw_tests';
-      this.docname = 'asdfoij4098asf234';
-      var path = '/'+ this.dbname +'/'+ this.docname;
+    function setPath (res) {
+      return '/'+ dbname +'/'+ docname;
+    }
 
-      if (dbname) {
-        this.dbname = dbname;
-        return deleteIfExists(path, done);
-      }
-
-      dbname = this.dbname;
-
-      COUCH.request({
-        method: 'PUT'
-      , path: '/'+ this.dbname
-      , hostname: HOSTNAME
-      , port: PORT
-      , username: USERNAME
-      , password: PASSWORD
-      }).then(function (res) {
-        if (res.statusCode !== 201 && res.statusCode !== 412) {
-          var msg = "Unexpected response status in setUp: "+ res.statusCode;
-          return done(new Error(msg));
-        }
-        return deleteIfExists(path, done);
-      }).failure(done);
-    };
-  }()),
+    LIB.ensureDatabase()
+      .then(setPath)
+      .then(LIB.removeDocument)
+      .then(LIB.noop)
+      .then(done)
+  },
 
   "PUT/create": function (test) {
     var docname = this.docname
@@ -60,31 +44,3 @@ exports["document operations"] = {
   }
 };
 
-
-function deleteIfExists(path, callback) {
-  function gotDocument(res) {
-    if (res.statusCode !== 200) return;
-
-    return COUCH.request({
-      method: 'DELETE'
-    , path: path
-    , rev: res.body._rev
-    , hostname: HOSTNAME
-    , port: PORT
-    , username: USERNAME
-    , password: PASSWORD
-    }).then(function () {});
-  }
-
-  COUCH.request({
-    method: 'GET'
-  , path: path
-  , hostname: HOSTNAME
-  , port: PORT
-  , username: USERNAME
-  , password: PASSWORD
-  })
-  .then(gotDocument)
-  .then(callback)
-  .failure(callback);
-}
