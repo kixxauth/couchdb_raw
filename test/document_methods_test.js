@@ -11,7 +11,7 @@ exports["document operations"] = {
       return '/'+ dbname +'/'+ docname;
     }
 
-    LIB.ensureDatabase()
+    LIB.ensureDatabase(dbname)
       .then(setPath)
       .then(LIB.removeDocument)
       .then(LIB.noop)

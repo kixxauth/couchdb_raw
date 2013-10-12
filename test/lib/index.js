@@ -7,10 +7,13 @@ exports.ensureDatabase = (function () {
 
   return function (databaseName) {
     if (databases[databaseName]) {
+      console.log("Database '"+ databaseName +"' already exists.");
       var deferred = IOU.newDefer()
       deferred.keep(databaseName);
       return deferred.promise();
     }
+
+    console.log("Creating database '"+ databaseName +"'.");
 
     var promise = COUCH.request({
       method: 'PUT'
@@ -32,8 +35,6 @@ exports.ensureDatabase = (function () {
 }());
 
 exports.removeDocument = function (path) {
-  console.log('remove', path)
-
   function gotDocument(res) {
     if (res.statusCode !== 200) return;
 
