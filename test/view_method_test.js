@@ -64,7 +64,7 @@ exports["view doument operations"] = {
       , docname = this.createDoc
       , views = {'baz': {map: "function (doc) { emit(doc.id, doc); }"}}
 
-    test.expect(12);
+    test.expect(16);
 
     // Create the document:
     function putDocument() {
@@ -95,10 +95,26 @@ exports["view doument operations"] = {
       return promise;
     }
 
+    function getView(responses) {
+      var promise = COUCH.request({
+        method: 'GET'
+      , path: '/'+ dbname +'/_design/'+ docname + '/_view/baz'
+      , hostname: HOSTNAME
+      , port: PORT
+      , username: USERNAME
+      , password: PASSWORD
+      }).then(function (res) {
+        responses.getView = res;
+        return responses;
+      });
+      return promise;
+    }
+
     // Test the results:
     function runTests(responses) {
       var get = responses.get
         , put = responses.put
+        , getView = responses.getView
 
       // Test the PUT
       test.strictEqual(put.statusCode, 201, 'PUT status code')
@@ -116,12 +132,19 @@ exports["view doument operations"] = {
       test.equal(put.body.rev, get.body._rev, 'correct revision')
       test.equal(get.body.views.baz.map, 'function (doc) { emit(doc.id, doc); }', 'doc.views')
 
+      // Test GET view
+      test.strictEqual(getView.statusCode, 200, 'GET status code')
+      test.assertJSON(getView, 'GET JSON')
+      test.ok(typeof getView.body.total_rows === 'number', 'GET view total_rows')
+      test.ok(Array.isArray(getView.body.rows), 'GET view rows')
+
       // Make sure to return undefined.
       return;
     }
 
     putDocument()
       .then(getDoc)
+      .then(getView)
       .then(runTests)
       .then(test.done)
       .failure(test.done);
